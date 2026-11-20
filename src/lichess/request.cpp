@@ -14,7 +14,7 @@ void get_email::compile(http::request<http::string_body>& req) {
 
 make_move::make_move(std::string_view token, std::string_view game_id,
                      std::string_view uci)
-    : token_(token), game_id_(game_id), uci_(uci) {}
+  : token_(token), game_id_(game_id), uci_(uci) {}
 
 void make_move::compile(http::request<http::string_body>& req) {
   req.method(http::verb::post);
@@ -26,11 +26,11 @@ void make_move::compile(http::request<http::string_body>& req) {
 }
 
 make_move::error_context::error_context(std::size_t max)
-    : max_attempts(max), attempts(0) {}
+  : max_attempts(max), attempts(0) {}
 
 new_challenge::new_challenge(std::string_view token,
                              const new_challenge::config& cfg)
-    : token_(token), cfg_(cfg) {}
+  : token_(token), cfg_(cfg) {}
 
 void new_challenge::compile(http::request<http::string_body>& req) {
   req.method(http::verb::post);
@@ -41,9 +41,9 @@ void new_challenge::compile(http::request<http::string_body>& req) {
   req.set(http::field::authorization, std::format("Bearer {}", token_));
 
   req.body() = std::format(
-      "clock.limit={}&clock.increment={}&rated={}&color={}&variant=standard",
-      cfg_.limit, cfg_.increment, cfg_.is_rated,
-      cfg_.is_color_random                  ? "random"
+    "clock.limit={}&clock.increment={}&rated={}&color={}&variant=standard",
+    cfg_.limit, cfg_.increment, cfg_.is_rated,
+    cfg_.is_color_random                    ? "random"
       : (cfg_.color == chess::Color::WHITE) ? "white"
                                             : "black");
   req.prepare_payload();
@@ -51,7 +51,7 @@ void new_challenge::compile(http::request<http::string_body>& req) {
 
 open_board_stream::open_board_stream(std::string_view token,
                                      std::string_view game_id)
-    : token_(token), game_id_(game_id) {}
+  : token_(token), game_id_(game_id) {}
 
 void open_board_stream::compile(http::request<http::string_body>& req) {
   req.method(http::verb::get);
@@ -72,7 +72,7 @@ void open_event_stream::compile(http::request<http::string_body>& req) {
 }
 
 resign_a_game::resign_a_game(std::string_view token, std::string_view game_id)
-    : token_(token), game_id_(game_id) {}
+  : token_(token), game_id_(game_id) {}
 
 void resign_a_game::compile(http::request<http::string_body>& req) {
   req.method(http::verb::post);

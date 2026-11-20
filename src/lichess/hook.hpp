@@ -42,7 +42,7 @@ private:
 }; // class hook::board_stream
 
 class hook::event_stream
-    : public std::enable_shared_from_this<hook::event_stream> {
+  : public std::enable_shared_from_this<hook::event_stream> {
 public:
   static std::shared_ptr<event_stream> spawn(std::shared_ptr<context>);
 
