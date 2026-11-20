@@ -117,89 +117,104 @@ int main(int argc, char* argv[]) {
   auto net =
       std::make_shared<network::context>(lichess::host, lichess::port, log);
   std::thread io_task([net]() { net->io().run(); });
-  auto game_tok = load_token("game-token");
-  auto game = std::make_shared<lichess::context>("deadcm", log);
 
-  start_event_stream(net, game, game_tok);
-  send_challenge(
-      net, game_tok,
-      lichess::request::new_challenge::config{.opponent_name = argv[1]});
+  try {
+    auto game_tok = load_token("game-token");
+    auto game = std::make_shared<lichess::context>("eyesred", log);
 
-  auto canvas = std::make_shared<render::context>(std::cout);
+    start_event_stream(net, game, game_tok);
+    send_challenge(
+        net, game_tok,
+        lichess::request::new_challenge::config{.opponent_name = argv[1],
+                                                .is_color_random = false,
+                                                .color = chess::Color::WHITE});
 
-  render::animation mill(canvas, {'|', '/', '-', '\\'});
+    auto canvas = std::make_shared<render::context>(std::cout);
 
-  while (!game->is_game_started.load()) {
-    speak_until_wait("Accepting challenge", mill);
-    auto err = game->error.load();
-    if (err != err::code::none) {
-      log->error("on {}", err::message(err));
-      is_running.store(false);
-    }
-    if (!is_running.load())
-      break;
-  }
+    render::animation mill(canvas, {'|', '/', '-', '\\'});
 
-  if (is_running.load()) {
-    start_board_stream(net, game, game_tok, game->game_id);
-
-    render::board_renderer paint(canvas, game->board);
-    std::string uci('\0', 4);
-    chess::Movelist legals;
-    while (is_running.load()) {
-      if (game->is_my_turn.load()) {
-        {
-          std::lock_guard<std::mutex> lock(game->mtx);
-          chess::movegen::legalmoves(legals, *game->board);
-        }
-        chess::Move mv;
-        for (;;) {
-          std::system("clear");
-          paint.print(game->side);
-          std::cout << "> ";
-          std::cin >> uci;
-          if (!is_running.load())
-            break;
-          {
-            std::lock_guard<std::mutex> lock(game->mtx);
-            mv = chess::uci::uciToMove(*game->board, uci);
-          }
-          if (rng::find(legals, mv) != legals.end())
-            break;
-          log->error("move {} is illegal", uci);
-        }
-        std::lock_guard<std::mutex> lock(game->mtx);
-        game->my_last_move.store(mv);
-        game->is_my_turn.store(false);
-        game->board->makeMove(mv);
-        std::system("clear");
-        paint.print(game->side);
-        auto session =
-            std::make_shared<network::async::session>(net, [](auto) {});
-        *session << lichess::request::make_move(game_tok, game->game_id, uci);
-      }
-      while (!game->is_my_turn.load()) {
-        paint.print(game->side);
-        speak_until_wait("Waiting", mill);
-        auto err = game->error.load();
-        if (err != err::code::none) {
-          log->error("on {}", err::message(err));
-          is_running.store(false);
-        }
-        if (!is_running.load())
-          break;
+    while (!game->is_game_started.load()) {
+      speak_until_wait("Accepting challenge", mill);
+      auto err = game->error.load();
+      if (err != err::code::none) {
+        log->error("on {}", err::message(err));
+        is_running.store(false);
       }
       if (!is_running.load())
         break;
     }
 
-    if (!is_running.load())
-      resign(net, game_tok, game->game_id);
+    if (is_running.load()) {
+      start_board_stream(net, game, game_tok, game->game_id);
+
+      render::board_renderer paint(canvas, game->board);
+      std::string uci('\0', 4);
+      chess::Movelist legals;
+      while (is_running.load()) {
+        if (game->is_my_turn.load()) {
+          {
+            std::lock_guard<std::mutex> lock(game->mtx);
+            chess::movegen::legalmoves(legals, *game->board);
+          }
+          chess::Move mv;
+          for (;;) {
+            if (!is_running.load())
+              break;
+            std::system("clear");
+            paint.print(game->side);
+            std::cout << "> ";
+            std::cin >> uci;
+            if (!is_running.load())
+              break;
+            {
+              std::lock_guard<std::mutex> lock(game->mtx);
+              mv = chess::uci::uciToMove(*game->board, uci);
+            }
+            if (rng::find(legals, mv) != legals.end())
+              break;
+            log->error("move {} is illegal", uci);
+          }
+          {
+            std::lock_guard<std::mutex> lock(game->mtx);
+            game->my_last_move.store(mv);
+            game->is_my_turn.store(false);
+            game->board->makeMove(mv);
+          }
+          std::system("clear");
+          paint.print(game->side);
+          auto session =
+              std::make_shared<network::async::session>(net, [](auto) {});
+          *session << lichess::request::make_move(game_tok, game->game_id, uci);
+        }
+        while (!game->is_my_turn.load()) {
+          paint.print(game->side);
+          speak_until_wait("Waiting", mill);
+          auto err = game->error.load();
+          if (err != err::code::none) {
+            log->error("on {}", err::message(err));
+            is_running.store(false);
+          }
+          if (!is_running.load())
+            break;
+        }
+        if (!is_running.load())
+          break;
+      }
+
+      if (!is_running.load())
+        resign(net, game_tok, game->game_id);
+    }
+
+    net->stop();
+    io_task.join();
+
+    print_results(game);
+  } catch (const std::exception& ex) {
+    fmt::println("Error: {}", ex.what());
+    net->stop();
+    io_task.join();
+    return -1;
   }
 
-  io_task.join();
-  net->stop();
-
-  print_results(game);
   return 0;
 }
