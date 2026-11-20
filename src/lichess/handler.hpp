@@ -1,7 +1,8 @@
 #pragma once
 
-#include "nlohmann/json_fwd.hpp"
+#include "error.hpp"
 #include <chess.hpp>
+#include <error.h>
 #include <mutex>
 
 #include <nlohmann/json.hpp>
@@ -82,3 +83,61 @@ private:
 };
 
 } // namespace lichess::handler::board_stream
+
+namespace lichess::handler::event_stream {
+
+template <typename CtxSPtr>
+class game_start {
+public:
+  explicit game_start(CtxSPtr ctx) : ctx_(std::move(ctx)) {}
+
+  void handle(const nlohmann::json& body) {
+    const auto game = body.find("game");
+    const auto gameId = game->find("gameId");
+    const auto fen = game->find("fen");
+
+    std::lock_guard<std::mutex> lock(ctx_->mtx);
+    ctx_->game_id = gameId->get<std::string>();
+    *ctx_->board = chess::Board(fen->get<std::string>());
+    ctx_->is_game_started.store(true);
+    ctx_->log->info("game started with id \"{}\"", ctx_->game_id);
+  }
+
+private:
+  CtxSPtr ctx_;
+};
+
+template <typename CtxSPtr>
+class game_finish {
+public:
+  explicit game_finish(CtxSPtr ctx) : ctx_(std::move(ctx)) {}
+
+  void handle(const nlohmann::json& body) {
+    ctx_->is_game_finished.store(true);
+    const auto game = body["game"];
+    const auto winner = game["winner"];
+    const auto reason = game["status"]["name"];
+    ctx_->log->info("game finished with: winner {} and reason {}",
+                    winner.get<std::string>(), reason.get<std::string>());
+  }
+
+private:
+  CtxSPtr ctx_;
+};
+
+template <typename CtxSPtr>
+class challenge_declined {
+public:
+  explicit challenge_declined(CtxSPtr ctx) : ctx_(std::move(ctx)) {}
+
+  void handle(const nlohmann::json& body) {
+    const auto reason = body["challenge"]["declineReason"].get<std::string>();
+    ctx_->log->error("challenge decline reason: {}", reason);
+    ctx_->error.store(err::code::challenge_decline);
+  }
+
+private:
+  CtxSPtr ctx_;
+};
+
+} // namespace lichess::handler::event_stream

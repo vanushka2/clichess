@@ -82,55 +82,37 @@ hook::event_stream::event_stream(std::shared_ptr<context> ctx)
   : ctx_(ctx), hook_({}, std::move(ctx)) {}
 
 void hook::event_stream::init_hook() {
-  hook_ =
-    hook({{"gameStart",
-           [self = shared_from_this()](const nlohmann::json& body) {
-             try {
-               const auto game = body.find("game");
-               const auto gameId = game->find("gameId");
-               const auto fen = game->find("fen");
-
-               std::lock_guard<std::mutex> lock(self->ctx_->mtx);
-               self->ctx_->game_id = gameId->get<std::string>();
-               *self->ctx_->board = chess::Board(fen->get<std::string>());
-               self->ctx_->is_game_started.store(true);
-               self->ctx_->log->info("game started with id \"{}\"",
-                                     self->ctx_->game_id);
-             } catch (const std::exception& ex) {
-               self->ctx_->error.store(err::code::game_start);
-             }
-           }},
-          {"gameFinish",
-           [self = shared_from_this()](const nlohmann::json& body) {
-             try {
-               self->ctx_->is_game_finished.store(true);
-               const auto game = body["game"];
-               const auto winner = game["winner"];
-               const auto reason = game["status"]["name"];
-               self->ctx_->log->info(
-                 "game finished with: winner {} and reason {}",
-                 winner.get<std::string>(), reason.get<std::string>());
-             } catch (const std::exception& ex) {
-               self->ctx_->error.store(err::code::game_finish);
-             }
-           }},
-          {"challengeDeclined",
-           [self = shared_from_this()](const nlohmann::json& body) {
-             try {
-               const auto reason =
-                 body["challenge"]["declineReason"].get<std::string>();
-               self->ctx_->log->error("challenge decline reason: {}", reason);
-               self->ctx_->error.store(err::code::challenge_decline);
-             } catch (const std::exception& ex) {
-               self->ctx_->error.store(err::code::challenge_decline);
-             }
-           }},
-          {"challenge",
-           [self = shared_from_this()](auto) {
-             // TODO: Clear it: self->ctx_->log->info("challenge event catched
-             // here.");
-           }}},
-         ctx_);
+  hook_ = hook(
+    {{"gameStart",
+      [self = shared_from_this()](const nlohmann::json& body) {
+        try {
+          handler::event_stream::game_start(self->ctx_).handle(body);
+        } catch (const std::exception& ex) {
+          self->ctx_->error.store(err::code::game_start);
+        }
+      }},
+     {"gameFinish",
+      [self = shared_from_this()](const nlohmann::json& body) {
+        try {
+          handler::event_stream::game_finish(self->ctx_).handle(body);
+        } catch (const std::exception& ex) {
+          self->ctx_->error.store(err::code::game_finish);
+        }
+      }},
+     {"challengeDeclined",
+      [self = shared_from_this()](const nlohmann::json& body) {
+        try {
+          handler::event_stream::challenge_declined(self->ctx_).handle(body);
+        } catch (const std::exception& ex) {
+          self->ctx_->error.store(err::code::challenge_decline);
+        }
+      }},
+     {"challenge",
+      [self = shared_from_this()](auto) {
+        // TODO: Clear it: self->ctx_->log->info("challenge event catched
+        // here.");
+      }}},
+    ctx_);
 }
 
 hook hook::event_stream::get_hook() const { return hook_; }
