@@ -12,27 +12,27 @@
 namespace render {
 
 static constexpr auto chess_glyphs =
-    frozen::make_unordered_map<chess::Piece::underlying, std::string_view>(
-        {{chess::Piece::WHITEROOK, "♜"},
-         {chess::Piece::WHITEKNIGHT, "♞"},
-         {chess::Piece::WHITEBISHOP, "♝"},
-         {chess::Piece::WHITEQUEEN, "♛"},
-         {chess::Piece::WHITEKING, "♚"},
-         {chess::Piece::WHITEPAWN, "♟"},
-         {chess::Piece::BLACKROOK, "♖"},
-         {chess::Piece::BLACKKNIGHT, "♘"},
-         {chess::Piece::BLACKBISHOP, "♗"},
-         {chess::Piece::BLACKQUEEN, "♕"},
-         {chess::Piece::BLACKKING, "♔"},
-         {chess::Piece::BLACKPAWN, "♙"},
-         {chess::Piece::NONE, "."}});
+  frozen::make_unordered_map<chess::Piece::underlying, std::string_view>(
+    {{chess::Piece::WHITEROOK, "♜"},
+     {chess::Piece::WHITEKNIGHT, "♞"},
+     {chess::Piece::WHITEBISHOP, "♝"},
+     {chess::Piece::WHITEQUEEN, "♛"},
+     {chess::Piece::WHITEKING, "♚"},
+     {chess::Piece::WHITEPAWN, "♟"},
+     {chess::Piece::BLACKROOK, "♖"},
+     {chess::Piece::BLACKKNIGHT, "♘"},
+     {chess::Piece::BLACKBISHOP, "♗"},
+     {chess::Piece::BLACKQUEEN, "♕"},
+     {chess::Piece::BLACKKING, "♔"},
+     {chess::Piece::BLACKPAWN, "♙"},
+     {chess::Piece::NONE, "."}});
 
 context::context(std::ostream& stream) : stream_(stream) {}
 
 std::ostream& context::out() noexcept { return stream_; }
 
 animation::animation(std::shared_ptr<context> out, animation::vec_t&& frames)
-    : out_(std::move(out)), frames_(std::move(frames)), cur_(frames_.begin()) {}
+  : out_(std::move(out)), frames_(std::move(frames)), cur_(frames_.begin()) {}
 
 void animation::print() const {
   out_->out() << *cur_;
@@ -48,12 +48,12 @@ void animation::next() {
 
 board_renderer::board_renderer(std::shared_ptr<context> out,
                                std::weak_ptr<chess::Board> board)
-    : out_(std::move(out)), board_(board) {}
+  : out_(std::move(out)), board_(board) {}
 
 void board_renderer::print(chess::Color side) const {
   auto board = board_.lock();
   std::string_view files =
-      (side == chess::Color::WHITE) ? "  a b c d e f g h" : "  h g f e d c b a";
+    (side == chess::Color::WHITE) ? "  a b c d e f g h" : "  h g f e d c b a";
   out_->out() << files << "\n";
   for (auto row = 0; row < 8; ++row) {
     auto rown = (side == chess::Color::WHITE) ? 8 - row : row + 1;

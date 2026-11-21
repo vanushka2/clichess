@@ -4,8 +4,8 @@ namespace network {
 
 context::context(std::string_view host, std::string_view port,
                  std::shared_ptr<spdlog::logger> log)
-    : log_(std::move(log)), host_(host), port_(port),
-      tls_(ssl::context::tlsv13_client), work_(net::make_work_guard(ioc_)) {
+  : log_(std::move(log)), host_(host), port_(port),
+    tls_(ssl::context::tlsv13_client), work_(net::make_work_guard(ioc_)) {
   tls_.set_default_verify_paths();
   tls_.set_verify_mode(ssl::verify_peer);
 }
@@ -35,7 +35,7 @@ void context::ssl_set_hostname(SSL* ssl) {
 namespace network::sync {
 
 session::session(std::shared_ptr<context> ctx)
-    : ctx_(std::move(ctx)), stream_(ctx_->io(), ctx_->ssl()), buffer_() {
+  : ctx_(std::move(ctx)), stream_(ctx_->io(), ctx_->ssl()), buffer_() {
   ctx_->ssl_set_hostname(stream_.native_handle());
 
   stream_.set_verify_callback(ssl::host_name_verification(ctx_->host().data()));
@@ -81,8 +81,8 @@ void stream_session::on_write(beast::error_code ec, std::size_t) {
 
   prepare_buffer();
   http::async_read_header(
-      stream_, buffer_, parser_,
-      beast::bind_front_handler(&stream_session::on_read_header, self()));
+    stream_, buffer_, parser_,
+    beast::bind_front_handler(&stream_session::on_read_header, self()));
 }
 
 void stream_session::on_read_header(beast::error_code ec, std::size_t) {
@@ -140,8 +140,8 @@ void stream_session::process_chunk() {
 void stream_session::read_body() {
   prepare_buffer();
   http::async_read_some(
-      stream_, buffer_, parser_,
-      beast::bind_front_handler(&stream_session::on_read_body, self()));
+    stream_, buffer_, parser_,
+    beast::bind_front_handler(&stream_session::on_read_body, self()));
 }
 
 } // namespace network::async

@@ -64,7 +64,7 @@ void start_event_stream(std::shared_ptr<network::context> net,
                         std::shared_ptr<lichess::context> game,
                         std::string_view tok) {
   auto session = std::make_shared<network::async::stream_session>(
-      net, lichess::hook::event_stream::spawn(game)->get_hook());
+    net, lichess::hook::event_stream::spawn(game)->get_hook());
   *session << lichess::request::open_event_stream(tok);
 }
 
@@ -78,7 +78,7 @@ void start_board_stream(std::shared_ptr<network::context> net,
                         std::shared_ptr<lichess::context> game,
                         std::string_view tok, std::string_view gameid) {
   auto session = std::make_shared<network::async::stream_session>(
-      net, lichess::hook::board_stream::spawn(game)->get_hook());
+    net, lichess::hook::board_stream::spawn(game)->get_hook());
   *session << lichess::request::open_board_stream(tok, gameid);
 }
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
 
   auto log = spawn_logger();
   auto net =
-      std::make_shared<network::context>(lichess::host, lichess::port, log);
+    std::make_shared<network::context>(lichess::host, lichess::port, log);
   std::thread io_task([net]() { net->io().run(); });
 
   try {
@@ -124,10 +124,10 @@ int main(int argc, char* argv[]) {
 
     start_event_stream(net, game, game_tok);
     send_challenge(
-        net, game_tok,
-        lichess::request::new_challenge::config{.opponent_name = argv[1],
-                                                .is_color_random = false,
-                                                .color = chess::Color::WHITE});
+      net, game_tok,
+      lichess::request::new_challenge::config{.opponent_name = argv[1],
+                                              .is_color_random = false,
+                                              .color = chess::Color::WHITE});
 
     auto canvas = std::make_shared<render::context>(std::cout);
 
@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
           std::system("clear");
           paint.print(game->side);
           auto session =
-              std::make_shared<network::async::session>(net, [](auto) {});
+            std::make_shared<network::async::session>(net, [](auto) {});
           *session << lichess::request::make_move(game_tok, game->game_id, uci);
         }
         while (!game->is_my_turn.load()) {

@@ -62,7 +62,8 @@ class session {
 public:
   session(std::shared_ptr<context>);
 
-  template <typename Req> void operator<<(Req&&);
+  template <typename Req>
+  void operator<<(Req&&);
   void operator>>(std::string&);
 
 private:
@@ -71,7 +72,8 @@ private:
   beast::flat_buffer buffer_;
 }; // class session
 
-template <typename Req> void session::operator<<(Req&& r) {
+template <typename Req>
+void session::operator<<(Req&& r) {
   http::request<http::string_body> req;
   r.compile(req);
   http::write(stream_, req);
@@ -83,9 +85,10 @@ namespace network::async {
 
 template <typename Derived>
 class session_base
-    : public std::enable_shared_from_this<session_base<Derived>> {
+  : public std::enable_shared_from_this<session_base<Derived>> {
 public:
-  template <typename Cb> session_base(std::shared_ptr<context>, Cb&& hook);
+  template <typename Cb>
+  session_base(std::shared_ptr<context>, Cb&& hook);
   virtual ~session_base() = default;
 
   void start();
@@ -112,9 +115,11 @@ private:
 
 class session final : public session_base<session> {
 public:
-  template <typename Cb> session(std::shared_ptr<context>, Cb&& hook);
+  template <typename Cb>
+  session(std::shared_ptr<context>, Cb&& hook);
 
-  template <typename Req> void operator<<(Req&&);
+  template <typename Req>
+  void operator<<(Req&&);
 
 private:
   friend class session_base<session>;
@@ -127,9 +132,11 @@ private:
 
 class stream_session final : public session_base<stream_session> {
 public:
-  template <typename Cb> stream_session(std::shared_ptr<context>, Cb&& hook);
+  template <typename Cb>
+  stream_session(std::shared_ptr<context>, Cb&& hook);
 
-  template <typename Req> void operator<<(Req&&);
+  template <typename Req>
+  void operator<<(Req&&);
 
 private:
   friend class session_base<stream_session>;
@@ -150,8 +157,8 @@ private:
 template <typename Derived>
 template <typename Cb>
 session_base<Derived>::session_base(std::shared_ptr<context> ctx, Cb&& hook)
-    : ctx_(std::move(ctx)), hook_(std::forward<Cb>(hook)),
-      resolver_(ctx_->io()), stream_(ctx_->io(), ctx_->ssl()) {
+  : ctx_(std::move(ctx)), hook_(std::forward<Cb>(hook)), resolver_(ctx_->io()),
+    stream_(ctx_->io(), ctx_->ssl()) {
   ctx_->ssl_set_hostname(stream_.native_handle());
 }
 
@@ -167,15 +174,17 @@ void session_base<Derived>::fail(beast::error_code ec, char const* what,
   shutdown();
 }
 
-template <typename Derived> void session_base<Derived>::shutdown() {
+template <typename Derived>
+void session_base<Derived>::shutdown() {
   stream_.async_shutdown(
-      beast::bind_front_handler(&session_base::on_shutdown, self()));
+    beast::bind_front_handler(&session_base::on_shutdown, self()));
 }
 
-template <typename Derived> void session_base<Derived>::start() {
+template <typename Derived>
+void session_base<Derived>::start() {
   resolver_.async_resolve(
-      ctx_->host(), ctx_->port(),
-      beast::bind_front_handler(&session_base::on_resolve, self()));
+    ctx_->host(), ctx_->port(),
+    beast::bind_front_handler(&session_base::on_resolve, self()));
 }
 
 template <typename Derived>
@@ -186,18 +195,18 @@ void session_base<Derived>::on_resolve(beast::error_code ec,
 
   using namespace std::literals;
   beast::get_lowest_layer(stream_).async_connect(
-      results, beast::bind_front_handler(&session_base::on_connect, self()));
+    results, beast::bind_front_handler(&session_base::on_connect, self()));
 }
 
 template <typename Derived>
 void session_base<Derived>::on_connect(
-    beast::error_code ec, tcp::resolver::results_type::endpoint_type) {
+  beast::error_code ec, tcp::resolver::results_type::endpoint_type) {
   if (ec)
     return fail(ec, "connect", err::code::session_connect);
 
   stream_.async_handshake(
-      ssl::stream_base::client,
-      beast::bind_front_handler(&session_base::on_handshake, self()));
+    ssl::stream_base::client,
+    beast::bind_front_handler(&session_base::on_handshake, self()));
 }
 
 template <typename Derived>
@@ -220,9 +229,10 @@ void session_base<Derived>::on_shutdown(beast::error_code ec) {
 
 template <typename Cb>
 session::session(std::shared_ptr<context> ctx, Cb&& hook)
-    : session_base(std::move(ctx), std::forward<Cb>(hook)) {}
+  : session_base(std::move(ctx), std::forward<Cb>(hook)) {}
 
-template <typename Req> void session::operator<<(Req&& r) {
+template <typename Req>
+void session::operator<<(Req&& r) {
   r.compile(request_);
   start();
   ctx_->log()->debug("session started");
@@ -230,11 +240,12 @@ template <typename Req> void session::operator<<(Req&& r) {
 
 template <typename Cb>
 stream_session::stream_session(std::shared_ptr<context> ctx, Cb&& hook)
-    : session_base(std::move(ctx), std::forward<Cb>(hook)) {
+  : session_base(std::move(ctx), std::forward<Cb>(hook)) {
   accum_.reserve(chunk_buffer_.size());
 }
 
-template <typename Req> void stream_session::operator<<(Req&& r) {
+template <typename Req>
+void stream_session::operator<<(Req&& r) {
   r.compile(request_);
   start();
   ctx_->log()->debug("stream session started");
